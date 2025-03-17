@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8"/>
+<title>좌석 선택하기 (일반석 & 커플석)</title>
+<style>
+body {
+	font-family: Arial;
+	background-color: #242333;
+	color: #fff;
+	text-align: center;
+	margin-top: 20px;
+}
+
+.seat-map {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin: auto;
+    width: 100%;
+    max-width: 500px; /* 최대 넓이 제한 */
+}
+
+.seat-row {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.seat {
+    flex: 1;
+    max-width: 35px; /* 좌석 최대 크기 */
+    aspect-ratio: 1/1; /* 정사각형 유지 */
+    border: 1px solid #aaa;
+    margin: 3px;
+    cursor: pointer;
+    line-height: 30px;
+    font-size: 0.8rem;
+}
+
+@media (max-width: 600px) { /* 화면 폭이 600px 이하일 때 */
+    .seat {
+        max-width: 25px;
+        margin: 2px;
+        font-size: 0.6rem;
+    }
+}
+
+
+.seat.selected {
+	background-color: #6bc1f2;
+	color: #fff;
+}
+
+.couple-seat {
+	background-color: #ff758f;
+}
+
+.couple-seat.selected {
+	background-color: #ff3860;
+}
+
+#payBtn {
+	margin-top: 20px;
+	padding: 8px;
+	width: 100%;
+	display: none;
+}
+
+/* 스크린 애니메이션 추가 */
+.container {
+	perspective: 1000px;
+	margin: 20px auto;
+	width: 200px;
+}
+
+.screen {
+	width: 200px;
+	height: 80px;
+	background-color: white;
+	box-shadow: 0 3px 10px rgba(255, 255, 255, 0.7);
+}
+
+.screen:hover {
+	transition: all 3s ease-out;
+	transform: rotateX(-180deg);
+}
+</style>
+</head>
+
+<body>
+    <h2>좌석 선택 (일반석 & 커플석)</h2>
+
+    <label>인원 선택:
+        <select id="seatCount">
+            <option value="0">인원 수 선택</option>
+            <option value="1">1명</option>
+            <option value="2">2명</option>
+            <option value="3">3명</option>
+            <option value="4">4명</option>
+        </select>
+    </label>
+
+    <!-- 스크린 애니메이션 추가 -->
+    <div class="container">
+        <div class="screen"></div>
+    </div>
+
+    <div class="seat-map" id="seatMap"></div>
+
+    <button id="payBtn">결제하기</button>
+
+<script th:inline="javascript">
+const seatMap = document.getElementById('seatMap');
+const payBtn = document.getElementById('payBtn');
+let selectedSeats = [];
+
+const rows = ['A', 'B', 'C', 'D', 'E']; // E열은 커플석
+rows.forEach(row => {
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'seat-row';
+
+    for (let i = 1; i <= 8; i++) {
+        const seat = document.createElement('div');
+        seat.className = 'seat';
+
+        // 커플석 처리 (E열)
+        if (row === 'E') {
+            seat.classList.add('couple-seat');
+            seat.dataset.type = 'couple';
+        } else {
+            seat.dataset.type = 'normal';
+        }
+
+        seat.textContent = row + i;
+        seat.onclick = () => selectSeat(seat);
+        rowDiv.appendChild(seat);
+    }
+    seatMap.appendChild(rowDiv);
+});
+
+
+function selectSeat(seat) {
+    const maxSeats = parseInt(document.getElementById('seatCount').value);
+
+    if (isNaN(maxSeats) || maxSeats === 0) {
+        alert('먼저 인원을 선택하세요.');
+        return;
+    }
+
+    if (seat.classList.contains('selected')) {
+        seat.classList.remove('selected');
+        selectedSeats = selectedSeats.filter(s => s !== seat.textContent);
+    } else {
+        let increment = seat.dataset.type === 'couple' ? 2 : 1;
+
+        if(selectedSeats.length + increment > maxSeats){
+            alert('선택한 인원을 초과할 수 없습니다. (커플석은 2명 단위)');
+            return;
+        }
+
+        seat.classList.add('selected');
+        selectedSeats.push(seat.textContent);
+
+        // 커플석일 경우 옆자리 자동 선택
+        if(seat.dataset.type === 'couple'){
+            let seatNum = parseInt(seat.textContent.slice(1));
+            let pairSeatNum = seatNum % 2 === 0 ? seatNum - 1 : seatNum + 1;
+            let pairSeatId = 'E' + pairSeatNum;
+
+            let pairSeat = Array.from(document.querySelectorAll('.couple-seat')).find(s => s.textContent === pairSeatId);
+            if(pairSeat && !pairSeat.classList.contains('selected')){
+                pairSeat.classList.add('selected');
+                selectedSeats.push(pairSeatId);
+            }
+        }
+    }
+
+    payBtn.style.display = (selectedSeats.length === maxSeats) ? 'block' : 'none';
+}
+
+payBtn.onclick = () => {
+    if(selectedSeats.length === 0){
+        alert("좌석을 선택해주세요.");
+        return;
+    }
+
+    const seatParam = selectedSeats.join(',');
+    const screeningId = /*[[${screening.id}]]*/ '0';
+
+    location.href = `/payments?screeningId=${screeningId}&seats=${seatParam}`;
+};
+</script>
+</body>
+</html>

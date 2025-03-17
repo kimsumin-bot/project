@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<title>영화 예매 시스템</title>
+<style>
+body {
+	font-family: Arial, sans-serif;
+	background-color: #242333;
+	color: #fff;
+	margin: 0;
+	padding: 20px;
+}
+
+.container {
+	display: flex;
+	justify-content: space-between;
+	gap: 10px;
+}
+
+.section {
+	background-color: #2f2d3b;
+	border-radius: 8px;
+	flex: 1;
+	margin: 5px;
+	overflow: auto;
+	height: 420px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.section h3 {
+	color: #fff;
+	padding: 8px;
+	background: #3e3c4e;
+	margin: 0;
+	text-align: center;
+}
+
+.item {
+	color: #ddd;
+	padding: 8px;
+	cursor: pointer;
+	border-bottom: 1px solid #444;
+	transition: all 0.3s;
+}
+
+.item:hover {
+	background-color: #57556c;
+}
+
+.item.selected {
+	background-color: #6bc1f2;
+	color: #fff;
+}
+
+#seatBtn {
+	display: none;
+	width: 100%;
+	padding: 10px;
+	margin-top: 10px;
+	background-color: #6bc1f2;
+	border: none;
+	color: white;
+	cursor: pointer;
+	border-radius: 4px;
+}
+</style>
+</head>
+<body>
+	<div class="container">
+		<!-- 영화 선택 -->
+		<div class="section" id="movies">
+			<h3>영화 선택</h3>
+			<div class="list">
+				<div class="item" th:each="movie:${movies}" th:data-id="${movie.id}"
+					th:text="${movie.title}"></div>
+			</div>
+		</div>
+
+		<!-- 극장 선택 -->
+		<div class="section" id="theaters">
+			<h3>극장 선택</h3>
+			<div class="list">
+				<div class="item" th:each="theater : ${theaters}"
+					th:data-id="${theater.id}"
+					th:text="${theater.location + ' - ' + theater.name}"></div>
+			</div>
+		</div>
+
+		<!-- 날짜 선택 -->
+		<div class="section" id="dates">
+			<h3>날짜 선택</h3>
+			<div class="list">
+				<div class="item" th:each="day : ${#numbers.sequence(14,30)}"
+					th:data-date="${'2025-03-' + (day < 10 ? '0'+day : day)}"
+					th:text="${'2025-03-' + (day < 10 ? '0'+day : day)}"></div>
+			</div>
+		</div>
+
+		<!-- 시간 선택 -->
+		<div class="section" id="times">
+			<h3>시간 선택</h3>
+			<div class="list" id="timeList">영화, 극장, 날짜를 선택해주세요.</div>
+			<button id="seatBtn" style="display: none;">좌석 선택하기</button>
+		</div>
+	</div>
+
+	<script>
+    const selected = { movieId: null, theaterId: null, date: null, screeningId: null };
+
+    function addEvent(section, type) {
+        document.querySelectorAll(`#${section} .item`).forEach(el => {
+            el.onclick = () => {
+                document.querySelectorAll(`#${section} .item`).forEach(i => i.classList.remove('selected'));
+                el.classList.add('selected');
+                selected[type] = el.getAttribute(type === 'date' ? 'data-date' : 'data-id');
+                selected.screeningId = null; // 상영 시간 선택 전 초기화
+                document.getElementById('seatBtn').style.display = 'none';
+                loadTimes();
+                console.log("🔍 선택된 정보:", selected);
+            };
+        });
+    }
+
+    addEvent('movies', 'movieId');
+    addEvent('theaters', 'theaterId');
+    addEvent('dates', 'date');
+
+    function loadTimes() {
+        const { movieId, theaterId, date } = selected;
+
+        if (movieId && theaterId && date) {
+            fetch(`/booking/screenings?movieId=${movieId}&theaterId=${theaterId}&date=${date}`)
+                .then(res => res.json())
+                .then(data => {
+                    console.log("받은 상영 시간 데이터:", data);
+                    const timeList = document.querySelector("#times .list");
+                    timeList.innerHTML = '';
+
+                    if (data.length === 0) {
+                        timeList.innerHTML = "상영 시간이 없습니다.";
+                        return;
+                    }
+
+                    data.forEach(s => {
+                        const div = document.createElement('div');
+                        div.className = 'item';
+                        div.textContent = s.screenTime; // HH:mm 형식
+                        div.onclick = () => {
+                            document.querySelectorAll('#timeList .item').forEach(i => i.classList.remove('selected'));
+                            div.classList.add('selected');
+                            selected.screeningId = s.id; // 선택된 상영 ID 저장
+                            console.log("선택된 상영 ID:", selected.screeningId);
+                            document.getElementById('seatBtn').style.display = 'block'; // 버튼 활성화
+                        };
+                        timeList.appendChild(div);
+                    });
+                })
+                .catch(error => console.error("상영 시간 불러오기 오류:", error));
+        }
+    }
+
+    document.getElementById('seatBtn').onclick = () => {
+        if (selected.screeningId) {
+            console.log("이동할 URL:", `/select-seat?screeningId=${selected.screeningId}`);
+            location.href = `/select-seat?screeningId=${selected.screeningId}`;
+        } else {
+            alert('상영 시간을 선택해주세요.');
+        }
+    };
+</script>
+
+</body>
+</html>

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>결제 성공</title>
+    <style>
+        body {
+            background-color: #e9f1ff;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding-top: 50px;
+        }
+
+        .wrapper {
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            width: 450px;
+            padding: 30px;
+            margin: auto;
+        }
+
+        h2 {
+            color: #3182f6;
+            margin-top: 20px;
+        }
+
+        .success-icon {
+            width: 80px;
+            margin-top: 10px;
+        }
+
+        .info-box {
+            text-align: left;
+            margin-top: 20px;
+            padding: 10px;
+        }
+
+        .info-box div {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .button {
+            padding: 10px;
+            border: none;
+            width: 48%;
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background-color: #3182f6;
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: #e8f3ff;
+            color: #1b64da;
+        }
+
+        .response-box {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            width: 450px;
+            margin: 20px auto;
+            padding: 20px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="wrapper">
+        <img class="success-icon" src="https://static.toss.im/illusts/check-blue-spot-ending-frame.png"/>
+        <h2>결제를 완료했어요</h2>
+
+        <div class="info-box">
+            <div><b>결제금액</b> <span id="amount">null원</span></div>
+            <div><b>주문번호</b> <span id="orderId">null</span></div>
+            <div><b>paymentKey</b> <span id="paymentKey">null</span></div>
+        </div>
+
+        <div class="button-container">
+            <button class="button btn-primary" onclick="location.href='https://docs.tosspayments.com/guides/v2/payment-widget/integration';">연동 문서</button>
+            <button class="button btn-secondary" onclick="location.href='https://discord.gg/A4fRFXQhRu';">실시간 문의</button>
+        </div>
+    </div>
+
+    
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+
+        async function confirm() {
+            var requestData = {
+                paymentKey: urlParams.get("paymentKey"),
+                orderId: urlParams.get("orderId"),
+                amount: urlParams.get("amount"),
+            };
+
+            const response = await fetch("/confirm", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(requestData),
+            });
+
+            const json = await response.json();
+
+            if (!response.ok) {
+                console.log(json);
+                window.location.href = `/fail.html?message=${json.message}&code=${json.code}`;
+            }
+
+            return json;
+        }
+
+        confirm().then(function (data) {
+            document.getElementById("response").innerHTML = `<pre>${JSON.stringify(data, null, 4)}</pre>`;
+        });
+
+        document.getElementById("orderId").textContent = urlParams.get("orderId") || "정보 없음";
+        document.getElementById("amount").textContent = (urlParams.get("amount") || "0") + "원";
+        document.getElementById("paymentKey").textContent = urlParams.get("paymentKey") || "정보 없음";
+    </script>
+
+</body>
+</html>

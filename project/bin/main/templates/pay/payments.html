@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<link rel="icon"
+	href="https://static.toss.im/icons/png/4x/icon-toss-logo.png" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>토스페이먼츠 샘플 프로젝트</title>
+
+<!-- 토스페이먼츠 스타일 추가 (필수) -->
+<link rel="stylesheet"
+	href="https://js.tosspayments.com/v2/payment-widget/payment-widget.css" />
+
+<!-- 토스페이먼츠 SDK -->
+<script src="https://js.tosspayments.com/v2/standard"></script>
+
+<style>
+body {
+	background-color: #f5f8ff;
+	font-family: Arial, sans-serif;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	flex-direction: column;
+	padding-top: 50px;
+}
+
+.wrapper {
+	background-color: #fff;
+	border-radius: 12px;
+	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+	width: 500px;
+	padding: 20px;
+	box-sizing: border-box;
+}
+
+#payment-button {
+	background-color: #3182f6;
+	border: none;
+	color: white;
+	padding: 10px;
+	width: 100%;
+	font-size: 16px;
+	cursor: pointer;
+	border-radius: 8px;
+	margin-top: 20px;
+}
+
+.checkable {
+	margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+	<div class="wrapper">
+		<!-- 결제 UI -->
+		<div id="payment-method"></div>
+		<!-- 이용약관 UI -->
+		<div id="agreement"></div>
+		<!-- 쿠폰 체크박스 -->
+		<div class="checkable">
+			<label for="coupon-box"> <input id="coupon-box"
+				type="checkbox" /> <span>5,000원 쿠폰 적용</span>
+			</label>
+		</div>
+		<!-- 결제하기 버튼 -->
+		<button id="payment-button">결제하기</button>
+	</div>
+
+	<script>
+      main();
+
+      async function main() {
+        const button = document.getElementById("payment-button");
+        const coupon = document.getElementById("coupon-box");
+        const amount = {
+          currency: "KRW",
+          value: 50000,
+        };
+
+        const clientKey = "test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm";
+        const customerKey = generateRandomString();
+        const tossPayments = TossPayments(clientKey);
+
+        const widgets = tossPayments.widgets({ customerKey });
+
+        await widgets.setAmount(amount);
+
+        await widgets.renderPaymentMethods({
+          selector: "#payment-method",
+          variantKey: "DEFAULT",
+        });
+
+        await widgets.renderAgreement({
+          selector: "#agreement",
+          variantKey: "AGREEMENT"
+        });
+
+        coupon.addEventListener("change", async function () {
+          await widgets.setAmount({
+            currency: "KRW",
+            value: coupon.checked ? amount.value - 5000 : amount.value,
+          });
+        });
+
+        button.addEventListener("click", async function () {
+        	  await widgets.requestPayment({
+        	    orderId: generateRandomString(),
+        	    orderName: "영화 예매",
+        	    successUrl: window.location.origin + "/success.html",
+        	    failUrl: window.location.origin + "/fail.html",
+        	    customerEmail: "customer123@gmail.com",
+        	    customerName: "김토스",
+        	    customerMobilePhone: "01012341234",
+        	  });
+        	});
+      }
+
+      function generateRandomString() {
+        return window.btoa(Math.random()).slice(0, 20);
+      }
+    </script>
+</body>
+</html>
